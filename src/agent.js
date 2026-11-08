@@ -150,7 +150,7 @@ async function runClaude({ task, tools, emit, signal, client, model }) {
 }
 
 /**
- * A simple keyword agent used when no ANTHROPIC_API_KEY is set, so the whole
+ * A simple keyword agent used when no Anthropic key is available, so the whole
  * app can be tried without an account. It is NOT an AI model, and the UI says so.
  */
 async function runDemo({ task, tools, emit }) {
@@ -184,16 +184,22 @@ async function runDemo({ task, tools, emit }) {
 }
 
 export function createAgent({ wallet, env = process.env, clientFactory } = {}) {
-  const mode = env.ANTHROPIC_API_KEY && env.AI_MODE !== 'demo' ? 'claude' : 'demo';
+  // A key set on the server is optional and belongs to whoever runs it. Visitors can instead
+  // bring their own: it arrives with a single run, is used for that request, and is never kept.
+  const demoOnly = env.AI_MODE === 'demo';
+  const serverKey = !demoOnly && env.ANTHROPIC_API_KEY ? env.ANTHROPIC_API_KEY : '';
+  const mode = serverKey ? 'claude' : 'demo';
   const model = env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 
   return {
     mode,
-    model: mode === 'claude' ? model : null,
-    async run(task, emit, signal) {
+    model,
+    acceptsOwnKey: !demoOnly,
+    async run(task, emit, signal, { apiKey } = {}) {
       const tools = makeToolbox(wallet, emit);
-      if (mode === 'demo') return runDemo({ task, tools, emit });
-      const client = clientFactory ? clientFactory() : new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+      const key = (!demoOnly && apiKey) || serverKey;
+      if (!key) return runDemo({ task, tools, emit });
+      const client = clientFactory ? clientFactory(key) : new Anthropic({ apiKey: key });
       return runClaude({ task, tools, emit, signal, client, model });
     },
   };

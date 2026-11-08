@@ -243,6 +243,20 @@
               <p id="owner-note"></p>
             </article>
             <article class="card">
+              <h2>Your Claude key</h2>
+              <p>The agent uses Claude when you give it your own Anthropic API key. Without one, a simple keyword matcher stands in.</p>
+              <form id="claude-key-form" class="stack">
+                <label class="field" for="claude-key"><span>Anthropic API key</span><small>Starts with sk-ant-. Use a key with a spend limit.</small></label>
+                <input id="claude-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
+                <div class="row">
+                  <button class="primary" type="submit">Use this key</button>
+                  <button class="secondary" id="claude-key-clear" type="button">Remove key</button>
+                </div>
+                <p class="hint" id="claude-key-status" role="status"></p>
+              </form>
+              <p class="hint">The key stays in this browser tab. It is sent to this server with each agent run, used for that one request and never saved or logged. Only paste it into a copy you run yourself or trust.</p>
+            </article>
+            <article class="card">
               <h2>Demo data</h2>
               <p>Clear the wallet, rules and history to start the demo again.</p>
               <button class="secondary" id="reset" type="button" hidden>Reset demo data</button>

@@ -421,3 +421,8 @@ main:focus { outline: 0; }
   .entry > .outcome { grid-column: 2; justify-self: start; }
 }
 @media (prefers-reduced-motion: reduce) { .shell, .collapse svg { transition: none; } }
+
+.stack { display: grid; gap: 0.6rem; margin-top: 0.75rem; }
+.stack .row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.stack input[type='password'] { width: 100%; }
+.card .hint { max-width: none; }

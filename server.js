@@ -15,7 +15,7 @@ const escapeHtml = (s) =>
 
 function friendlyAgentError(err) {
   if (err?.name === 'AbortError' || err?.name === 'APIUserAbortError') return 'The run was cancelled.';
-  if (err?.status === 401) return 'Anthropic rejected the API key. Check ANTHROPIC_API_KEY.';
+  if (err?.status === 401) return 'Anthropic rejected that API key. Check it in Settings.';
   if (err?.status === 429) return 'Anthropic is rate limiting this key. Wait a minute and try again.';
   return 'The agent stopped because of an error. Nothing further was bought.';
 }
@@ -85,7 +85,7 @@ export function createApp({ env = process.env, dataDir = env.DATA_DIR ?? path.jo
   // One snapshot of everything the page needs, including how this server is configured.
   const snapshot = () => {
     const s = wallet.getState();
-    return { ...s, modes: { ...s.modes, ai: agent.mode, model: agent.model, resetEnabled: env.ALLOW_RESET === '1', ownerKeyRequired: Boolean(ownerKey) } };
+    return { ...s, modes: { ...s.modes, ai: agent.mode, model: agent.model, userKeys: agent.acceptsOwnKey, resetEnabled: env.ALLOW_RESET === '1', ownerKeyRequired: Boolean(ownerKey) } };
   };
 
   app.get('/api/state', (req, res) => res.json(snapshot()));
@@ -164,6 +164,11 @@ export function createApp({ env = process.env, dataDir = env.DATA_DIR ?? path.jo
     const task = req.body.task.trim();
     if (!task) throw new HttpError(400, 'Tell the agent what to buy.');
     if (task.length > 300) throw new HttpError(400, 'Keep the job under 300 characters.');
+    // A visitor's own Anthropic key: checked for shape only, never logged, stored or echoed back.
+    const ownKey = req.get('x-anthropic-key');
+    if (ownKey !== undefined && !(agent.acceptsOwnKey && /^[A-Za-z0-9_-]{20,300}$/.test(ownKey))) {
+      throw new HttpError(400, 'That does not look like an Anthropic API key.');
+    }
     if (overLimit(req.ip)) {
       throw new HttpError(429, `This demo allows ${perHour} agent runs per hour. Try again later.`);
     }
@@ -189,7 +194,7 @@ export function createApp({ env = process.env, dataDir = env.DATA_DIR ?? path.jo
     };
 
     try {
-      await agent.run(task, emit, controller.signal);
+      await agent.run(task, emit, controller.signal, { apiKey: ownKey });
       emit({ type: 'done' });
     } catch (err) {
       emit({ type: 'error', message: friendlyAgentError(err) });
@@ -235,6 +240,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   app.listen(port, '0.0.0.0', () => {
     console.log(`AgentWallet listening on http://localhost:${port}`);
     console.log(`  PayPal: ${paypal.mode}${paypal.mode === 'mock' ? ' (no money moves)' : ' (sandbox)'}`);
-    console.log(`  Agent:  ${agent.mode === 'claude' ? `Claude (${agent.model})` : 'demo keyword agent (set ANTHROPIC_API_KEY for Claude)'}`);
+    console.log(`  Agent:  ${agent.mode === 'claude' ? `Claude (${agent.model})` : 'demo keyword agent (visitors can paste their own Claude key in Settings)'}`);
   });
 }

@@ -7,6 +7,7 @@ import { createApp } from '../server.js';
 import { createStore } from '../src/store.js';
 import { createWalletService } from '../src/wallet.js';
 import { DEFAULT_RULES } from '../src/policy.js';
+import { createAgent } from '../src/agent.js';
 
 // A PayPal stand-in whose behaviour each test can script.
 function fakePayPal(over = {}) {
@@ -227,5 +228,46 @@ test('the agent job must be text', async () => {
     }
   } finally {
     server.close();
+  }
+});
+
+test('a visitor-supplied Claude key is used for that run only and never echoed or stored', async () => {
+  const SECRET = 'sk-ant-api03-TESTKEYTESTKEYTESTKEY1234';
+  const seen = [];
+  const fakeClient = { messages: { create: async () => ({ content: [{ type: 'text', text: 'Nothing to buy.' }], stop_reason: 'end_turn' }) } };
+  const { wallet, store } = boot(fakePayPal());
+  // No key on the server at all: the agent starts in demo mode.
+  const agent = createAgent({ wallet, env: {}, clientFactory: (key) => (seen.push(key), fakeClient) });
+  assert.equal(agent.mode, 'demo');
+
+  const events = [];
+  await agent.run('buy a pen', (e) => events.push(e), undefined, { apiKey: SECRET });
+  assert.deepEqual(seen, [SECRET], 'the visitor key reached the client for this run');
+  assert.ok(!JSON.stringify(events).includes(SECRET), 'never echoed in events');
+  assert.ok(!JSON.stringify(store.state).includes(SECRET), 'never stored in wallet state');
+
+  await agent.run('buy a pen', () => {});
+  assert.equal(seen.length, 1, 'the next run without a key falls back to the demo agent');
+});
+
+test('AI_MODE=demo refuses visitor keys, and malformed keys are rejected without being echoed', async () => {
+  const { app } = createApp({ env: { PAYPAL_MODE: 'mock' }, dataDir: null });
+  const { app: demoApp } = createApp({ env: { PAYPAL_MODE: 'mock', AI_MODE: 'demo' }, dataDir: null });
+  const open = (a) => new Promise((r) => { const s = a.listen(0, () => r(s)); });
+  const [s1, s2] = [await open(app), await open(demoApp)];
+  const post = (s, key) =>
+    fetch(`http://127.0.0.1:${s.address().port}/api/agent/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-anthropic-key': key },
+      body: JSON.stringify({ task: 'buy a pen' }),
+    });
+  try {
+    const bad = await post(s1, 'short key with spaces!');
+    assert.equal(bad.status, 400);
+    assert.ok(!(await bad.text()).includes('short key'), 'bad key not echoed');
+    assert.equal((await post(s2, 'sk-ant-api03-ABCDEFGHIJKLMNOPQRSTUV')).status, 400, 'demo-only server refuses keys');
+  } finally {
+    s1.close();
+    s2.close();
   }
 });

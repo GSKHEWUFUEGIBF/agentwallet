@@ -94,6 +94,13 @@ function showKeyForm(show, focus = false) {
   if (show && focus) $('#owner-key').focus(); // only when the person just hit a locked action
 }
 
+// The visitor's own Claude key lives in this tab only (sessionStorage), never in a cookie or on the server.
+const claudeKey = {
+  get() { try { return sessionStorage.getItem('aw-claude-key') || ''; } catch { return ''; } },
+  set(v) { try { v ? sessionStorage.setItem('aw-claude-key', v) : sessionStorage.removeItem('aw-claude-key'); } catch { /* storage unavailable */ } },
+};
+const liveAi = (s) => s.modes.ai === 'claude' || (s.modes.userKeys !== false && Boolean(claudeKey.get()));
+
 let state = null;
 let running = false;
 let toastTimer;
@@ -229,7 +236,7 @@ function render() {
     `${money(s.spentTodayCents)} spent today of a ${money(s.rules.dailyBudgetCents)} daily budget.`;
 
   const paypalLabel = s.modes.paypal === 'sandbox' ? 'PayPal sandbox' : 'Simulated checkout';
-  const aiLabel = s.modes.ai === 'claude' ? `Claude (${s.modes.model})` : 'Keyword demo agent';
+  const aiLabel = liveAi(s) ? (s.modes.ai === 'claude' ? `Claude (${s.modes.model})` : `Claude (${s.modes.model}, your key)`) : 'Keyword demo agent';
   $('#modes').replaceChildren(
     h('span', {}, 'Payments: ', h('strong', {}, paypalLabel)),
     h('span', {}, 'Agent: ', h('strong', {}, aiLabel)),
@@ -356,6 +363,34 @@ function setCollapsed(on) {
 $('#collapse').addEventListener('click', () => setCollapsed($('#collapse').getAttribute('aria-pressed') !== 'true'));
 try { if (localStorage.getItem('aw-collapsed')) setCollapsed(true); } catch { /* storage unavailable */ }
 
+// ---------- Settings: the visitor's own Claude key ----------
+
+function showClaudeKeyStatus() {
+  const on = Boolean(claudeKey.get());
+  $('#claude-key-status').textContent = on ? 'A key is set for this tab. Agent runs will use Claude.' : 'No key set. The keyword stand-in is used.';
+  $('#claude-key-clear').disabled = !on;
+}
+$('#claude-key-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('#claude-key').value.trim();
+  if (!/^[A-Za-z0-9_-]{20,300}$/.test(v)) {
+    $('#claude-key-status').textContent = 'That does not look like an Anthropic API key.';
+    return;
+  }
+  claudeKey.set(v);
+  $('#claude-key').value = '';
+  showClaudeKeyStatus();
+  if (state) render();
+  toast('Key saved for this tab only.');
+});
+$('#claude-key-clear').addEventListener('click', () => {
+  claudeKey.set('');
+  showClaudeKeyStatus();
+  if (state) render();
+  toast('Key removed.');
+});
+showClaudeKeyStatus();
+
 // ---------- App shell: badge, bell, views ----------
 
 function renderChrome(s) {
@@ -376,11 +411,11 @@ function renderChrome(s) {
 
   const chip = (tone, text) => h('span', { class: `outcome ${tone}` }, text);
   $('#agent-card').replaceChildren(
-    h('h2', {}, s.modes.ai === 'claude' ? 'Claude shopping agent' : 'Keyword demo agent'),
-    h('p', {}, s.modes.ai === 'claude'
+    h('h2', {}, liveAi(s) ? 'Claude shopping agent' : 'Keyword demo agent'),
+    h('p', {}, liveAi(s)
       ? `Claude (${s.modes.model}) reads your job, searches the store and asks the wallet to buy, using tool calls. It explains what it did.`
-      : 'A simple keyword matcher stands in for the AI, so the whole app works with no account. It is not an AI model. Add an Anthropic key to use Claude.'),
-    chip(s.modes.ai === 'claude' ? 'go' : 'hold', s.modes.ai === 'claude' ? 'Live model' : 'Stand-in'),
+      : 'A simple keyword matcher stands in for the AI, so the whole app works with no account. It is not an AI model. Paste your own Anthropic key in Settings to use Claude.'),
+    chip(liveAi(s) ? 'go' : 'hold', liveAi(s) ? 'Live model' : 'Stand-in'),
     h('p', { class: 'hint' }, 'Tools: check_wallet, search_catalog, request_purchase'),
     h('a', { class: 'linkish', href: '#/' }, 'Give it a job'),
   );
@@ -392,8 +427,8 @@ function renderChrome(s) {
       sandbox ? 'Top-ups create a sandbox order, send you to PayPal to approve, then capture it. The captured amount is verified before the wallet is credited.' : 'A stand-in checkout page replaces PayPal. Add PayPal sandbox credentials to use the real one.'),
     card('PayPal Payouts: pay merchants', sandbox && s.modes.receiverConfigured ? 'go' : 'hold', sandbox && s.modes.receiverConfigured ? 'Connected (sandbox)' : 'Simulated',
       sandbox && s.modes.receiverConfigured ? 'Allowed purchases are paid out to your sandbox receiver account. The purchase id is the batch id, so a retry cannot pay twice.' : 'Payouts are simulated. Set PAYPAL_MERCHANT_EMAIL to a sandbox account to send real sandbox payouts.'),
-    card('Claude: the shopping agent', s.modes.ai === 'claude' ? 'go' : 'hold', s.modes.ai === 'claude' ? s.modes.model : 'Not connected',
-      s.modes.ai === 'claude' ? 'Tool use with three tools. The wallet, not the model, decides every purchase.' : 'Add ANTHROPIC_API_KEY to switch from the keyword stand-in to Claude.'),
+    card('Claude: the shopping agent', liveAi(s) ? 'go' : 'hold', liveAi(s) ? s.modes.model : 'Not connected',
+      liveAi(s) ? 'Tool use with three tools. The wallet, not the model, decides every purchase.' : 'Paste your own Anthropic key in Settings to switch from the keyword stand-in to Claude.'),
     card('Owner key', s.modes.ownerKeyRequired ? 'go' : 'hold', s.modes.ownerKeyRequired ? 'Protected' : 'Open',
       s.modes.ownerKeyRequired ? 'Money-moving actions need the key.' : 'Fine for a demo with no real credentials.'),
   );
@@ -631,7 +666,7 @@ $('#agent-form').addEventListener('submit', async (e) => {
   try {
     const res = await fetch('/api/agent/run', {
       method: 'POST',
-      headers: headersFor(true),
+      headers: { ...headersFor(true), ...(claudeKey.get() ? { 'x-anthropic-key': claudeKey.get() } : {}) },
       body: JSON.stringify({ task }),
     });
     if (!res.ok) await failFrom(res);

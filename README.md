@@ -67,7 +67,7 @@ Then fill in `.env`:
 1. **PayPal sandbox.** In the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/applications/sandbox), create a Sandbox app and copy its client ID and secret into `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`.
 2. **A receiver for payouts.** Under Testing tools, Sandbox accounts, pick a sandbox account to receive merchant payments and put its email in `PAYPAL_MERCHANT_EMAIL`. In this demo every merchant payout goes to that one account. Leave it blank to simulate payouts instead.
 3. **A buyer to pay with.** When you click "Add with PayPal", sign in at the sandbox checkout with a sandbox personal account.
-4. **Claude.** Put an [Anthropic API key](https://console.anthropic.com/) in `ANTHROPIC_API_KEY`.
+4. **Claude.** No key is built in. Open **Settings** and paste your own [Anthropic API key](https://console.anthropic.com/). It stays in that browser tab, goes to the server with each agent run, is used for that one request, and is never saved or logged. (A server operator can instead set `ANTHROPIC_API_KEY` for their own deployment.)
 
 Also set `OWNER_KEY` to any long random string and `PUBLIC_URL` to the address you open the app at. Restart with `npm start`, enter the key in the box at the top of the page, and the footer now shows "PayPal sandbox" and "Claude".
 
@@ -77,9 +77,9 @@ Also set `OWNER_KEY` to any long random string and `PUBLIC_URL` to the address y
 | `PAYPAL_MERCHANT_EMAIL` | Sandbox account that receives payouts. Blank means payouts are simulated. |
 | `OWNER_KEY` | Secret that protects everything that moves money or changes rules. **Required** when PayPal credentials are set; the app refuses to start without it. Anyone can view the wallet, but only someone with the key can add funds, run the agent, approve, decline or change rules. |
 | `PAYPAL_MODE=mock` | Force mock mode even if credentials are set. |
-| `ANTHROPIC_API_KEY` | Enables the Claude agent. |
+| `ANTHROPIC_API_KEY` | Optional, for your own deployment only. Visitors can paste their own key in Settings instead. |
 | `ANTHROPIC_MODEL` | Model to use. Defaults to `claude-sonnet-5-5`. |
-| `AI_MODE=demo` | Force the keyword demo agent even if a key is set. |
+| `AI_MODE=demo` | Force the keyword demo agent and refuse visitor-supplied keys. |
 | `AGENT_RUNS_PER_HOUR` | Per-visitor limit on Claude runs. Defaults to 20. |
 | `TRUST_PROXY` | Set to `1` only behind a trusted proxy such as Render (the included `render.yaml` does). Left unset, the per-visitor limit ignores `X-Forwarded-For`, so it cannot be spoofed. |
 | `ALLOW_RESET=1` | Shows a "Reset demo data" button. |
