@@ -190,3 +190,42 @@ test('a bounded history keeps the data file from growing forever', async () => {
   await wallet.requestPurchase({ itemId: 'notebook-3pack' });
   assert.ok(store.state.purchases.length <= 500);
 });
+
+test('a spoofed X-Forwarded-For cannot dodge the agent-run limit', async () => {
+  const { app } = createApp({ env: { PAYPAL_MODE: 'mock', AGENT_RUNS_PER_HOUR: '2' }, dataDir: null });
+  const server = await new Promise((r) => {
+    const s = app.listen(0, () => r(s));
+  });
+  const run = (i) =>
+    fetch(`http://127.0.0.1:${server.address().port}/api/agent/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': `10.0.0.${i}` },
+      body: JSON.stringify({ task: 'buy a gel pen' }),
+    }).then((r) => r.status);
+  try {
+    const codes = [];
+    for (let i = 1; i <= 4; i++) codes.push(await run(i));
+    assert.deepEqual(codes, [200, 200, 429, 429]);
+  } finally {
+    server.close();
+  }
+});
+
+test('the agent job must be text', async () => {
+  const { app } = createApp({ env: { PAYPAL_MODE: 'mock' }, dataDir: null });
+  const server = await new Promise((r) => {
+    const s = app.listen(0, () => r(s));
+  });
+  try {
+    for (const task of [{ a: 1 }, ['x'], 42, null]) {
+      const res = await fetch(`http://127.0.0.1:${server.address().port}/api/agent/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task }),
+      });
+      assert.equal(res.status, 400, JSON.stringify(task));
+    }
+  } finally {
+    server.close();
+  }
+});

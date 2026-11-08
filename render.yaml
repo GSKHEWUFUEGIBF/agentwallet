@@ -11,6 +11,8 @@ services:
         value: "22"
       - key: DATA_DIR
         value: /tmp/agentwallet
+      - key: TRUST_PROXY
+        value: "1"
       - key: ALLOW_RESET
         value: "1"
       - key: OWNER_KEY

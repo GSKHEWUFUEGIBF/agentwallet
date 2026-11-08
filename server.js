@@ -46,7 +46,9 @@ export function createApp({ env = process.env, dataDir = env.DATA_DIR ?? path.jo
   };
 
   const app = express();
-  app.set('trust proxy', 1);
+  // Only believe X-Forwarded-For when told a proxy is in front (TRUST_PROXY=1, as on Render).
+  // Otherwise anyone could pick their own address and dodge the per-visitor limit.
+  app.set('trust proxy', /^\d+$/.test(env.TRUST_PROXY ?? '') ? Number(env.TRUST_PROXY) : false);
   app.disable('x-powered-by');
   app.use(express.json({ limit: '10kb' }));
 
@@ -158,7 +160,8 @@ export function createApp({ env = process.env, dataDir = env.DATA_DIR ?? path.jo
   }
 
   app.post('/api/agent/run', owner, async (req, res) => {
-    const task = String(req.body?.task ?? '').trim();
+    if (typeof req.body?.task !== 'string') throw new HttpError(400, 'Tell the agent what to buy.');
+    const task = req.body.task.trim();
     if (!task) throw new HttpError(400, 'Tell the agent what to buy.');
     if (task.length > 300) throw new HttpError(400, 'Keep the job under 300 characters.');
     if (overLimit(req.ip)) {

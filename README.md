@@ -81,6 +81,7 @@ Also set `OWNER_KEY` to any long random string and `PUBLIC_URL` to the address y
 | `ANTHROPIC_MODEL` | Model to use. Defaults to `claude-sonnet-5-5`. |
 | `AI_MODE=demo` | Force the keyword demo agent even if a key is set. |
 | `AGENT_RUNS_PER_HOUR` | Per-visitor limit on Claude runs. Defaults to 20. |
+| `TRUST_PROXY` | Set to `1` only behind a trusted proxy such as Render (the included `render.yaml` does). Left unset, the per-visitor limit ignores `X-Forwarded-For`, so it cannot be spoofed. |
 | `ALLOW_RESET=1` | Shows a "Reset demo data" button. |
 | `PUBLIC_URL` | Public address of the app (for example `http://localhost:3000`), used for PayPal's return links. **Required** in sandbox mode, so a forged `Host` header cannot redirect the buyer. |
 | `PORT`, `DATA_DIR` | Port, and where the JSON data file lives. |
