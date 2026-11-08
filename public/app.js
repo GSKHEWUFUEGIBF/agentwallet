@@ -23,6 +23,25 @@ const $ = (sel) => document.querySelector(sel);
 const money = (cents) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const toCents = (v) => Math.round(parseFloat(v) * 100);
 
+const ICONS = {
+  electronics: 'M9 3v4M15 3v4M7 7h10v5a5 5 0 0 1-10 0zM12 17v4',
+  office: 'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3',
+  home: 'M4 11l8-7 8 7M6 10v10h12V10M10 20v-5h4v5',
+  books: 'M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h10',
+  'gift-cards': 'M4 9h16v11H4zM3 6h18v3H3zM12 6v14M12 6c-2-3-5-2-4 0M12 6c2-3 5-2 4 0',
+  luxury: 'M9 3h6l1 4H8zM9 21h6l1-4H8zM8 7h8v10H8zM12 10v3l2 1',
+};
+function itemIcon(category) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', ICONS[category] ?? ICONS.office);
+  svg.append(path);
+  return h('span', { class: 'entry-icon' }, svg);
+}
+
 function h(tag, props = {}, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) {
@@ -144,18 +163,23 @@ function approvalButtons(p) {
   );
 }
 
-/** A purchase as it appears while the agent is working. */
+/** A purchase as it appears while the agent is working: icon, details, and the verdict on the right. */
 function streamEntry(p) {
   const o = outcomeOf(p);
   const why = whyText(p);
   return h(
     'li',
     { class: `entry ${o.tone}`, 'data-pid': p.id, 'data-sig': `${p.status}|${p.decision}` },
-    h('div', { class: 'entry-head' }, h('span', {}, p.title), h('span', { class: 'entry-amt' }, money(p.amountCents))),
-    h('p', { class: 'entry-merchant' }, p.merchant),
+    itemIcon(p.category),
+    h(
+      'div',
+      { class: 'entry-body' },
+      h('div', { class: 'entry-head' }, h('span', {}, p.title), h('span', { class: 'entry-amt' }, money(p.amountCents))),
+      h('p', { class: 'entry-merchant' }, p.merchant),
+      why && h('p', { class: 'why' }, why),
+      approvalButtons(p),
+    ),
     outcomeBadge(p),
-    why && h('p', { class: 'why' }, why),
-    approvalButtons(p),
   );
 }
 
@@ -182,7 +206,7 @@ function tapeLine(item) {
   const why = whyText(p);
   return h(
     'li',
-    { 'data-pid': p.id },
+    { 'data-pid': p.id, class: `t-${outcomeOf(p).tone}` },
     h(
       'div',
       { class: 'line' },
@@ -225,6 +249,7 @@ function render() {
   else if (s.modes.ownerKeyRequired) $('#key-form').hidden = true;
   renderLadder(s.rules);
   renderChrome(s);
+  renderSteps(s);
   $('#topup-hint').textContent =
     s.modes.paypal === 'sandbox'
       ? 'You will sign in to PayPal with a sandbox buyer account to approve the payment.'
@@ -270,6 +295,66 @@ function renderLadder(r) {
   );
 }
 
+
+// ---------- Progress, recent jobs, sidebar ----------
+
+function renderSteps(s) {
+  const funded = s.wallet.balanceCents > 0 || s.purchases.length > 0 || s.topups.some((t) => t.status === 'completed');
+  const shopped = s.purchases.length > 0;
+  const mark = { fund: funded ? 'done' : 'current', rules: null, shop: shopped ? 'done' : funded ? 'current' : null };
+  for (const li of document.querySelectorAll('#steps li')) {
+    const st = mark[li.dataset.step];
+    li.className = st ?? '';
+    const a = li.querySelector('a');
+    if (st === 'current') a.setAttribute('aria-current', 'step');
+    else a.removeAttribute('aria-current');
+    li.querySelector('.step-n').textContent = st === 'done' ? '✓' : ({ fund: '1', rules: '2', shop: '3' })[li.dataset.step];
+  }
+}
+
+const RECENT_KEY = 'aw-recent-jobs';
+function recentJobs() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').filter((t) => typeof t === 'string').slice(0, 3); } catch { return []; }
+}
+function rememberJob(task) {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify([task, ...recentJobs().filter((t) => t !== task)].slice(0, 3))); } catch { /* storage unavailable */ }
+  renderRecent();
+}
+function renderRecent() {
+  const jobs = recentJobs();
+  const box = $('#recent');
+  box.hidden = jobs.length === 0;
+  box.replaceChildren(
+    ...(jobs.length ? [h('span', { class: 'recent-label' }, 'Recent')] : []),
+    ...jobs.map((t) => h('button', { class: 'chip', type: 'button', onclick: () => { $('#task').value = t; $('#task').focus(); } }, t)),
+  );
+}
+
+$('#topup-jump').addEventListener('click', () => {
+  $('#topup-amt').scrollIntoView({ block: 'center' });
+  $('#topup-amt').focus();
+});
+document.querySelector('#steps a[href="#topup-amt"]').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (currentView !== 'dashboard') location.hash = '#/';
+  $('#topup-amt').scrollIntoView({ block: 'center' });
+  $('#topup-amt').focus();
+});
+document.querySelector('#steps a[href="#agent"]').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (currentView !== 'dashboard') location.hash = '#/';
+  $('#agent').scrollIntoView({ block: 'start' });
+  $('#task').focus();
+});
+
+function setCollapsed(on) {
+  document.querySelector('.shell').classList.toggle('collapsed', on);
+  $('#collapse').setAttribute('aria-pressed', String(on));
+  $('#collapse').setAttribute('aria-label', on ? 'Expand the sidebar' : 'Collapse the sidebar');
+  try { localStorage.setItem('aw-collapsed', on ? '1' : ''); } catch { /* storage unavailable */ }
+}
+$('#collapse').addEventListener('click', () => setCollapsed($('#collapse').getAttribute('aria-pressed') !== 'true'));
+try { if (localStorage.getItem('aw-collapsed')) setCollapsed(true); } catch { /* storage unavailable */ }
 
 // ---------- App shell: badge, bell, views ----------
 
@@ -535,6 +620,7 @@ $('#agent-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const task = $('#task').value.trim();
   if (!task) return;
+  rememberJob(task);
   const btn = $('#run');
   running = true;
   btn.disabled = true;
@@ -652,6 +738,7 @@ if (topupResult) {
   );
 }
 
+renderRecent();
 route();
 refresh()
   .then(fillRulesForm)

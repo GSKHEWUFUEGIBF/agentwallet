@@ -35,6 +35,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Settings</a>
       </nav>
       <div class="side-foot">
+        <button class="collapse" id="collapse" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span class="collapse-text">Collapse</span>
+        </button>
         <p class="modes" id="modes"></p>
         <p>A demo store with fictional merchants. No real money moves.</p>
       </div>
@@ -64,17 +67,10 @@
         <!-- ================= Dashboard ================= -->
         <section data-view="dashboard" aria-labelledby="h-dashboard">
           <h1 class="pitch" id="h-dashboard">Let an AI agent shop for you, inside rules it cannot break.</h1>
-          <ol class="how">
-            <li><b>Fund it</b><span>Add money with PayPal.</span></li>
-            <li><b>Set the rules</b><span>Limits, a daily budget, allowed categories.</span></li>
-            <li>
-              <b>The agent shops</b>
-              <span class="verdicts">
-                <span class="outcome go"><span class="glyph" aria-hidden="true">✓</span>Paid</span>
-                <span class="outcome hold"><span class="glyph" aria-hidden="true">‖</span>Ask you</span>
-                <span class="outcome stop"><span class="glyph" aria-hidden="true">✕</span>Blocked</span>
-              </span>
-            </li>
+          <ol class="steps" id="steps" aria-label="Progress">
+            <li data-step="fund"><a href="#topup-amt"><span class="step-n">1</span>Fund it</a></li>
+            <li data-step="rules"><a href="#/rules"><span class="step-n">2</span>Set the rules</a></li>
+            <li data-step="shop"><a href="#agent"><span class="step-n">3</span>The agent shops</a></li>
           </ol>
           <p class="view-only" id="view-only" hidden>You are viewing this wallet. Enter the owner key at the top to add funds or run the agent.</p>
 
@@ -84,6 +80,7 @@
               <p class="balance" id="balance">$0.00</p>
               <p class="funds-sub" id="funds-sub"></p>
               <div class="meter" aria-hidden="true"><div class="meter-fill" id="meter-fill"></div></div>
+              <button class="linkish topup-jump" id="topup-jump" type="button">+ Top up</button>
             </section>
             <form class="card topup" id="topup-form" novalidate>
               <label for="topup-amt">Add funds</label>
@@ -109,7 +106,9 @@
                     <span class="need-funds" id="need-funds" hidden>Add funds first.</span>
                   </div>
                   <div class="chips" id="chips" role="group" aria-label="Example jobs"></div>
+                  <div class="chips recent" id="recent" role="group" aria-label="Your recent jobs" hidden></div>
                 </form>
+                <h3 class="feed-h">Live feed</h3>
                 <ol class="stream" id="stream" aria-live="polite" aria-relevant="additions">
                   <li class="empty">Give the agent a job. Each purchase will show Paid, Waiting for you or Blocked, and why.</li>
                 </ol>
