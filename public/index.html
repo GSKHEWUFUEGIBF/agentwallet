@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgentWallet</title>
+  <meta name="description" content="Let an AI agent shop for you inside spending rules you set. Funded and settled through the PayPal sandbox.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232e4bff'/%3E%3Cpath d='M8 21h16M8 16h16M8 11h10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the content</a>
+
+  <div class="shell">
+    <aside class="side">
+      <p class="brand">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="currentColor"/><path d="M8 21h16M8 16h16M8 11h10" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
+        AgentWallet
+      </p>
+      <nav class="nav" aria-label="Main">
+        <a href="#/" data-nav="dashboard">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>Dashboard</a>
+        <a href="#/rules" data-nav="rules">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Budgets &amp; rules</a>
+        <a href="#/agents" data-nav="agents">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01"/></svg>Agents</a>
+        <a href="#/transactions" data-nav="transactions">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2zM9 9h6M9 13h6"/></svg>Transactions</a>
+        <a href="#/integrations" data-nav="integrations">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8V4M15 8V4M7 8h10v4a5 5 0 0 1-10 0zM12 17v3"/></svg>Integrations</a>
+        <a href="#/settings" data-nav="settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Settings</a>
+      </nav>
+      <div class="side-foot">
+        <p class="modes" id="modes"></p>
+        <p>A demo store with fictional merchants. No real money moves.</p>
+      </div>
+    </aside>
+
+    <div class="body">
+      <header class="bar">
+        <label class="search">
+          <span class="sr">Search transactions</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg>
+          <input id="search" type="search" placeholder="Search transactions" autocomplete="off">
+        </label>
+        <form class="key-form" id="key-form" hidden>
+          <label for="owner-key">Owner key</label>
+          <input id="owner-key" type="password" autocomplete="off" required>
+          <button class="secondary" type="submit">Unlock</button>
+        </form>
+        <span class="badge" id="mode-badge"></span>
+        <a class="bell" id="bell" href="#/" aria-label="Nothing is waiting for you">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/></svg>
+          <span class="bell-count" id="bell-count" hidden></span>
+        </a>
+      </header>
+
+      <main id="main" tabindex="-1">
+
+        <!-- ================= Dashboard ================= -->
+        <section data-view="dashboard" aria-labelledby="h-dashboard">
+          <h1 class="pitch" id="h-dashboard">Let an AI agent shop for you, inside rules it cannot break.</h1>
+          <ol class="how">
+            <li><b>Fund it</b><span>Add money with PayPal.</span></li>
+            <li><b>Set the rules</b><span>Limits, a daily budget, allowed categories.</span></li>
+            <li>
+              <b>The agent shops</b>
+              <span class="verdicts">
+                <span class="outcome go"><span class="glyph" aria-hidden="true">✓</span>Paid</span>
+                <span class="outcome hold"><span class="glyph" aria-hidden="true">‖</span>Ask you</span>
+                <span class="outcome stop"><span class="glyph" aria-hidden="true">✕</span>Blocked</span>
+              </span>
+            </li>
+          </ol>
+          <p class="view-only" id="view-only" hidden>You are viewing this wallet. Enter the owner key at the top to add funds or run the agent.</p>
+
+          <div class="funds">
+            <section class="card balance-card" aria-label="Wallet">
+              <p class="funds-label">Wallet balance</p>
+              <p class="balance" id="balance">$0.00</p>
+              <p class="funds-sub" id="funds-sub"></p>
+              <div class="meter" aria-hidden="true"><div class="meter-fill" id="meter-fill"></div></div>
+            </section>
+            <form class="card topup" id="topup-form" novalidate>
+              <label for="topup-amt">Add funds</label>
+              <div class="topup-row">
+                <span class="money-in"><span aria-hidden="true">$</span><input id="topup-amt" type="number" inputmode="decimal" min="1" max="500" step="1" value="100" required></span>
+                <button class="primary" type="submit" id="topup-btn">Add with PayPal</button>
+              </div>
+              <p class="form-error" id="topup-error" role="alert"></p>
+              <p class="hint" id="topup-hint"></p>
+            </form>
+          </div>
+
+          <div class="cols">
+            <div class="col-main">
+              <section class="agent" id="agent" tabindex="-1" aria-labelledby="agent-h">
+                <h2 id="agent-h">What should the agent buy?</h2>
+                <form id="agent-form">
+                  <label class="sr" for="task">Job for the agent</label>
+                  <textarea id="task" rows="2" maxlength="300" placeholder="Buy a USB-C hub under $30" required></textarea>
+                  <div class="agent-actions">
+                    <button class="primary" type="submit" id="run">Run agent</button>
+                    <button class="secondary" type="button" id="tour">Try the three outcomes</button>
+                    <span class="need-funds" id="need-funds" hidden>Add funds first.</span>
+                  </div>
+                  <div class="chips" id="chips" role="group" aria-label="Example jobs"></div>
+                </form>
+                <ol class="stream" id="stream" aria-live="polite" aria-relevant="additions">
+                  <li class="empty">Give the agent a job. Each purchase will show Paid, Waiting for you or Blocked, and why.</li>
+                </ol>
+              </section>
+
+              <section class="rules-peek" aria-labelledby="peek-h">
+                <h2 id="peek-h">Your rules</h2>
+                <div class="ladder" aria-hidden="true"></div>
+                <p class="rules-summary" id="rules-summary"></p>
+                <a class="linkish" href="#/rules">Edit budgets and rules</a>
+              </section>
+            </div>
+
+            <aside class="col-tape" aria-labelledby="tape-h">
+              <div class="tape-head">
+                <h2 id="tape-h">Receipt tape</h2>
+                <p class="pending-pill" id="pending-pill" hidden></p>
+              </div>
+              <div class="tape">
+                <ol id="tape"></ol>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- ================= Budgets & rules ================= -->
+        <section data-view="rules" hidden aria-labelledby="h-rules">
+          <h1 class="view-title" id="h-rules">Budgets &amp; rules</h1>
+          <p class="view-sub">The wallet applies these to every purchase. The agent can ask, but it cannot change them.</p>
+          <div class="card rules">
+            <div class="ladder" aria-hidden="true"></div>
+            <form id="rules-form" novalidate>
+              <div class="rule-fields">
+                <label class="field">
+                  <span>Agent can spend alone up to</span>
+                  <small>Above this, it must ask you.</small>
+                  <span class="money-in"><span aria-hidden="true">$</span><input name="autoApprove" type="number" inputmode="decimal" min="0" step="0.01" required></span>
+                </label>
+                <label class="field">
+                  <span>Block anything above</span>
+                  <small>The agent can never exceed this.</small>
+                  <span class="money-in"><span aria-hidden="true">$</span><input name="hardLimit" type="number" inputmode="decimal" min="0" step="0.01" required></span>
+                </label>
+                <label class="field">
+                  <span>Daily budget</span>
+                  <small>Past this, every purchase waits for you.</small>
+                  <span class="money-in"><span aria-hidden="true">$</span><input name="dailyBudget" type="number" inputmode="decimal" min="0" step="0.01" required></span>
+                </label>
+              </div>
+              <fieldset class="cats">
+                <legend>Allowed categories</legend>
+                <div id="cats"></div>
+              </fieldset>
+              <label class="field wide">
+                <span>Blocked merchants, separated by commas</span>
+                <small>Never paid, whatever the price.</small>
+                <input name="blocked" type="text" maxlength="400" autocomplete="off">
+              </label>
+              <p class="form-error" id="rules-error" role="alert"></p>
+              <button class="primary" type="submit">Save rules</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- ================= Agents ================= -->
+        <section data-view="agents" hidden aria-labelledby="h-agents">
+          <h1 class="view-title" id="h-agents">Agents</h1>
+          <p class="view-sub">Who shops for you, what it may do, and the store it shops in.</p>
+          <div class="grid2">
+            <article class="card" id="agent-card"></article>
+            <article class="card">
+              <h2>What the agent can and cannot do</h2>
+              <ul class="plain">
+                <li><b>Can</b> check the wallet balance and your rules.</li>
+                <li><b>Can</b> search the store catalog.</li>
+                <li><b>Can</b> ask the wallet to buy an item, up to 3 times per job.</li>
+                <li><b>Cannot</b> set a price: prices come from the store.</li>
+                <li><b>Cannot</b> change your rules, add funds, or approve its own request.</li>
+                <li><b>Cannot</b> pay for the same item twice in one job.</li>
+              </ul>
+            </article>
+          </div>
+          <h2 class="section-h">The demo store</h2>
+          <p class="view-sub">Fictional merchants. One listing is hostile on purpose.</p>
+          <div class="table-wrap">
+            <table class="table" id="catalog">
+              <caption class="sr">Items in the demo store</caption>
+              <thead><tr><th scope="col">Item</th><th scope="col">Merchant</th><th scope="col">Category</th><th scope="col" class="num">Price</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= Transactions ================= -->
+        <section data-view="transactions" hidden aria-labelledby="h-tx">
+          <h1 class="view-title" id="h-tx">Transactions</h1>
+          <p class="view-sub">Every purchase the agent asked for and every top-up, with the reason for each decision.</p>
+          <div class="filters">
+            <label>Show
+              <select id="tx-filter">
+                <option value="all">Everything</option>
+                <option value="go">Paid</option>
+                <option value="hold">Waiting or unconfirmed</option>
+                <option value="stop">Blocked or failed</option>
+                <option value="funds">Added funds</option>
+              </select>
+            </label>
+            <p class="count" id="tx-count" role="status"></p>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="ledger">
+              <caption class="sr">Transactions, newest first</caption>
+              <thead><tr><th scope="col">When</th><th scope="col">Item</th><th scope="col" class="num">Amount</th><th scope="col">Outcome</th><th scope="col">Why</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= Integrations ================= -->
+        <section data-view="integrations" hidden aria-labelledby="h-int">
+          <h1 class="view-title" id="h-int">Integrations</h1>
+          <p class="view-sub">What this server is connected to right now.</p>
+          <div class="grid2" id="integrations"></div>
+        </section>
+
+        <!-- ================= Settings ================= -->
+        <section data-view="settings" hidden aria-labelledby="h-set">
+          <h1 class="view-title" id="h-set">Settings</h1>
+          <div class="grid2">
+            <article class="card">
+              <h2>Owner access</h2>
+              <p id="owner-note"></p>
+            </article>
+            <article class="card">
+              <h2>Demo data</h2>
+              <p>Clear the wallet, rules and history to start the demo again.</p>
+              <button class="secondary" id="reset" type="button" hidden>Reset demo data</button>
+              <p class="hint" id="reset-note"></p>
+            </article>
+            <article class="card">
+              <h2>About</h2>
+              <p>AgentWallet puts a rules layer between an AI agent and your money. Built for the PayPal AI Hackathon. MIT licensed.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

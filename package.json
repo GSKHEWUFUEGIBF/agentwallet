@@ -1,0 +1,20 @@
+{
+  "name": "agentwallet",
+  "version": "0.1.0",
+  "description": "A spending-rules wallet for AI shopping agents, funded and settled through the PayPal sandbox.",
+  "type": "module",
+  "license": "MIT",
+  "private": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test \"tests/*.test.js\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
+    "express": "^5.3.0"
+  }
+}
